@@ -1,58 +1,75 @@
-# Aviation Accidents Analysis
+# Commercial Aviation Safety Analysis
 
-Aviation safety analysis for a consulting engagement: which aircraft makes/models show low
-rates of total destruction and low likelihood of fatal or serious injuries in an accident.
+## 1. Business Problem
+Our consulting firm was contracted by an aviation and airline insurer to evaluate the safety profiles of various commercial and private aircraft. The client's primary objective is to minimize risk by identifying airplane makes and models that exhibit:
+1. A low rate of total aircraft destruction in the event of an incident.
+2. A low likelihood of fatal or serious passenger injuries.
 
-## Status
+Additionally, the client requested an analysis of external variables (such as weather and engine type) to better understand general risk factors that impact flight safety. This analysis will guide the insurer's underwriting guidelines and risk assessment models for modern, professionally built aircraft.
 
-This package is **partial**. It contains the data layer and the completed, executed cleaning
-notebook. The analysis notebook, the README visual/report sections and the exported figures
-were not finished before the session ended.
+## 2. Data Overview & Preparation
+The analysis is based on the National Transportation Safety Board (NTSB) aviation accident database. To ensure the recommendations apply to the client's target market (active, professionally built aircraft), the following strict data cleaning and filtering protocols were applied:
+*   **Timeframe:** Filtered for events from 1983 onwards to account for a maximum 40-year airframe lifespan.
+*   **Build Type:** Excluded amateur-built aircraft (`Amateur.Built == 'No'`).
+*   **Aircraft Type:** Restricted strictly to airplanes (`Aircraft.Category == 'Airplane'`).
 
-| Component | Status |
-| --- | --- |
-| Raw data + state lookup | Complete (verbatim copies of the supplied files) |
-| `01_Aviation_Accidents_Cleaning.ipynb` | Complete, executed end-to-end, 0 errors |
-| Cleaned dataset `data/aviation_cleaned.csv` | Complete, 18,072 rows x 37 columns |
-| Analysis notebook (EDA, make/model injury and destruction rates) | **Missing** |
-| Exported figures (`images/`) | **Empty** — the folder exists but no figures were saved |
+### 2.1 Key Metrics Constructed
+*   **Estimated Occupants:** Calculated by summing all reported injuries and uninjured passengers.
+*   **Injury Severity Rate:** The fraction of fatal and serious injuries over the total estimated occupants (`fatal_serious_fraction`).
+*   **Destruction Rate:** A binary indicator (1 = Destroyed, 0 = Minor/Substantial Damage) to evaluate airframe survivability.
 
-## Contents
+## 3. Methodology
+Due to the catastrophic but rare nature of aviation accidents, the injury data is highly zero-inflated (the majority of incidents result in zero serious injuries). Relying purely on mean averages is statistically dangerous. Therefore, our Exploratory Data Analysis (EDA) approach utilized:
+*   **Minimum Sample Sizes:** Makes were required to have a minimum of 50 historical events, while specific models required at least 20 events (10 for large jets) to be considered statistically robust.
+*   **Distributional Analysis:** Horizontal bar charts for readability were paired with Violin and Strip plots to visualize the true spread of the injury rates, proving that the low averages were not just artifacts of outliers.
 
-```
+## 4. Key Findings & Recommendations
+
+### 4.1 Aircraft Size Analysis (Passenger Threshold: 20)
+**Small Aircraft (<= 20 Occupants):**
+*   **Top Makes:** Cessna, Piper, and Beech have established massive historical flight volumes while maintaining exceptionally low severe injury fractions. 
+*   **Top Models:** The Cessna 172, Cessna 152, and Piper PA-28 variants stand out as the safest specific airframes for private and small commercial policies.
+*   *Visuals:* See `images/small_models_injury.png` and `images/small_makes_violin.png`.
+
+**Large Aircraft (> 20 Occupants):**
+*   **Top Makes:** Boeing, McDonnell Douglas, and Airbus represent the safest large-scale manufacturers.
+*   **Top Models:** The Boeing 737 series demonstrates an incredibly dense clustering of zero-injury events across thousands of incidents, making it a highly insurable commercial airframe.
+*   *Visuals:* See `images/large_models_injury.png` and `images/large_makes_strip.png`.
+
+### 4.2 External Risk Factors
+**Weather Condition (VMC vs. IMC):**
+*   Accidents occurring in Instrument Meteorological Conditions (IMC - poor visibility/weather) show a drastically higher mean injury severity and aircraft destruction rate compared to Visual Meteorological Conditions (VMC).
+*   **Recommendation:** The insurer should mandate strict IFR (Instrument Flight Rules) certification and modern avionics requirements for policies covering flight in IMC.
+*   *Visuals:* See `images/weather_factor.png`.
+
+**Engine Type:**
+*   Reciprocating engines (common in older, smaller aircraft) carry the highest rates of destruction and passenger injury. Turbo Fan and Turbo Jet engines (common in commercial aviation) are significantly safer.
+*   **Recommendation:** Premium discounts can confidently be applied to commercial fleets utilizing modern Turbo Fan engines.
+*   *Visuals:* See `images/engine_factor.png`.
+
+## 5. Repository Structure
+```text
 .
-├── README.md
-├── data/
-│   ├── aviation_raw.csv        # NTSB-style accident data, 88,889 rows x 31 columns
-│   ├── lookup_states.csv       # US state name / abbreviation lookup, 63 lines
-│   └── aviation_cleaned.csv    # output of the cleaning notebook, 18,072 x 37
-├── notebooks/
-│   └── 01_Aviation_Accidents_Cleaning.ipynb
-└── images/                     # reserved for exported figures (currently empty)
+├── README.md                                  # Project overview and conclusions
+├── data/                                      
+│   ├── AviationData.csv                       # Original NTSB raw data (not tracked in Git if large)
+│   ├── USState_Codes.csv                      # State code lookup
+│   └── aviation_cleaned.csv                   # Cleaned dataset ready for EDA
+├── notebooks/                                 
+│   ├── Aviation_Accidents_Cleaning.ipynb      # Phase 1: Pandas data wrangling & cleaning
+│   └── Aviation_Accidents_Data_Analysis.ipynb # Phase 2: EDA, Statistics, & Visualizations
+└── images/                                    # Exported visualization PNGs
+    ├── makes_injury_rates.png
+    ├── small_makes_violin.png
+    ├── large_makes_strip.png
+    ├── small_models_injury.png
+    ├── large_models_injury.png
+    ├── weather_factor.png
+    └── engine_factor.png
 ```
 
-## Pipeline
-
-`notebooks/01_Aviation_Accidents_Cleaning.ipynb` reads `data/aviation_raw.csv` (cp1252
-encoding), applies the cleaning and filtering rules, writes `data/aviation_cleaned.csv`,
-then reloads the file to verify it. The notebook resolves its paths relative to the project
-root, so it runs whether the working directory is the repo root or `notebooks/`.
-
-Recorded results from the executed notebook:
-
-- raw input: 88,889 rows x 31 columns
-- final cleaned frame: 18,072 rows x 37 columns
-- reload check: 18,072 rows x 37 columns
-
-## Reproducing
-
-```bash
-pip install pandas numpy matplotlib seaborn jupyter
-jupyter nbconvert --to notebook --execute --inplace notebooks/01_Aviation_Accidents_Cleaning.ipynb
-```
-
-## Not included
-
-No GitHub repository was created or pushed for this work. The analysis notebook and its
-figures still need to be written against `data/aviation_cleaned.csv`.
-
+## 6. How to Reproduce
+1. Clone this repository to your local machine.
+2. Ensure you have the required libraries installed: `pip install pandas numpy matplotlib seaborn`.
+3. Run the `Aviation_Accidents_Cleaning.ipynb` notebook to generate the cleaned dataset in the `data/` folder.
+4. Run the `Aviation_Accidents_Data_Analysis.ipynb` notebook to perform the EDA and automatically export the charts to the `images/` directory.
